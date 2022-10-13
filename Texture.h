@@ -3,8 +3,6 @@
 #include <string>
 #include <glad/glad.h>
 
-#include "stb_image.h"
-
 class Texture
 {
 
@@ -13,6 +11,8 @@ class Texture
 		~Texture();
 
 		void bind() const;
+
+		GLuint get_texture() const { return texture_; };
 
 	private:
 		GLuint texture_;

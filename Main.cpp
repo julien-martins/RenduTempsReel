@@ -14,6 +14,7 @@
 
 #include "stl.h"
 #include "obj.h"
+#include "Texture.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -67,6 +68,9 @@ int main()
 	unsigned int VBO;
 	glGenBuffers(1, &VBO);
 
+	unsigned int uvBuffer;
+	glGenBuffers(1, &uvBuffer);
+
 	//Generate VAO
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
@@ -84,56 +88,34 @@ int main()
 	const auto tris = ReadStl("resources/models/garfield.stl");
 	std::cout << tris.size() << std::endl;
 	const auto nTriangles = tris.size();
-	/*
+
 	//Load Garfield Texture
-	GLubyte* garfieldTexture;
-	int widthGarfieldTexture, heightGarfieldTexture;
-	bool hasAlpha;
-
-	char fileName[] = "resources/textures/tex1.png";
-	loadPngImage(fileName, widthGarfieldTexture, heightGarfieldTexture, hasAlpha, &garfieldTexture);
-
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, hasAlpha ? 4 : 3, 
-			widthGarfieldTexture, 
-			heightGarfieldTexture, 
-			0, 
-			hasAlpha ? GL_RGBA : GL_RGB, 
-			GL_UNSIGNED_BYTE,
-			garfieldTexture);
-
-	// Trilinear filtering
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	*/
+	Texture garfieldTex1("resources/textures/tex1.png");
+	Texture garfieldTex2("resources/textures/tex2.png");
+	Texture garfieldTex3("resources/textures/tex3.png");
 
 	//Load OBJ Garfield
-	std::vector<glm::vec4> garfield_vertices;
+	std::vector<glm::vec3> garfield_vertices;
 	std::vector<glm::vec2> garfield_uvs;
 	std::vector<glm::vec3> garfield_normals;
-	std::vector<GLushort> garfield_elements;
 
-	load_obj("resources/models/garfield.obj", garfield_vertices, garfield_uvs, garfield_normals, garfield_elements);
-
-	//Copy all vertices in the VAO
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, nTriangles * sizeof(Triangle), tris.data(), GL_STATIC_DRAW);
+	load_obj("resources/models/garfield.obj", garfield_vertices, garfield_uvs, garfield_normals);
 
 	const auto index = glGetAttribLocation(shaderProgram, "position");
 	const auto indexUV = glGetAttribLocation(shaderProgram, "vertexUV");
 
-	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle) / 3, (void*)0);
+	//Copy all vertices in the VAO
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, garfield_vertices.size() * sizeof(glm::vec3), &garfield_vertices[0], GL_STATIC_DRAW);
+
+	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(index);
 
-	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(Triangle) / 3) );
+	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+	glBufferData(GL_ARRAY_BUFFER, garfield_uvs.size() * sizeof(glm::vec2), &garfield_uvs[0], GL_STATIC_DRAW);
+
+	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(indexUV);
 
 	glEnable(GL_DEPTH_TEST);
@@ -150,15 +132,28 @@ int main()
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
 
+		glUniform1i(glGetUniformLocation(shaderProgram, "tex1"), 0);
+		glUniform1i(glGetUniformLocation(shaderProgram, "tex2"), 1);
+		glUniform1i(glGetUniformLocation(shaderProgram, "tex3"), 2);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, garfieldTex1.get_texture());
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, garfieldTex2.get_texture());
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, garfieldTex3.get_texture());
+
+
 		//Projection Transformation
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 		//model Transformation
 		glm::mat4 transMat = glm::mat4(1.0f);
-		transMat = glm::translate(transMat, glm::vec3(0, -50, -120));
-		transMat = glm::scale(transMat, glm::vec3(0.5f, 0.5f, 0.5f));
-		transMat = glm::rotate(transMat, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
-		transMat = glm::rotate(transMat, (float)(sin(glfwGetTime())), glm::vec3(0.0, 0.0, 1.0));
+		transMat = glm::translate(transMat, glm::vec3(0, -50, -150));
+		transMat = glm::scale(transMat, glm::vec3(0.5, 0.5, 0.5));
+		transMat = glm::rotate(transMat, (float)(glfwGetTime()), glm::vec3(0.0, 1.0, 0.0));
 
 		glUniformMatrix4fv(locTrans, 1, GL_FALSE, glm::value_ptr(transMat));
 		glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
