@@ -16,6 +16,11 @@
 #include "obj.h"
 #include "Texture.h"
 
+struct Light {
+	glm::vec3 position;
+	glm::vec3 emission;
+};
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -48,21 +53,6 @@ int main()
 	//Callback to have the possibility to resize the window
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glViewport(0, 0, 800, 600);
-
-	const char *vertexShaderSource = "#version 330 core\n"
-		"in vec3 position;\n"
-		"void main()\n"
-		"{\n"
-		"	gl_Position = vec4(position * 0.01, 1.0f);\n"
-		"}\0";
-
-	const char *fragmentShaderSource = "#version 330 core\n"
-		"out vec4 FragColor;\n"
-		"void main()\n"
-		"{\n"
-		"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-		"}\n\0";
-
 	
 	//Generate VBO
 	unsigned int VBO;
@@ -70,6 +60,9 @@ int main()
 
 	unsigned int uvBuffer;
 	glGenBuffers(1, &uvBuffer);
+
+	unsigned int normalBuffer;
+	glGenBuffers(1, &normalBuffer);
 
 	//Generate VAO
 	unsigned int VAO;
@@ -83,6 +76,8 @@ int main()
 
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
+
+	Light light1 = { glm::vec3(10, 4, 10), glm::vec3(10000, 10000, 10000) };
 
 	//Load model STL
 	const auto tris = ReadStl("resources/models/garfield.stl");
@@ -103,6 +98,7 @@ int main()
 
 	const auto index = glGetAttribLocation(shaderProgram, "position");
 	const auto indexUV = glGetAttribLocation(shaderProgram, "vertexUV");
+	const auto indexNormal = glGetAttribLocation(shaderProgram, "normal");
 
 	//Copy all vertices in the VAO
 	glBindVertexArray(VAO);
@@ -118,13 +114,26 @@ int main()
 	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(indexUV);
 
+	glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+	glBufferData(GL_ARRAY_BUFFER, garfield_normals.size() * sizeof(glm::vec3), &garfield_normals[0], GL_STATIC_DRAW);
+
+	glVertexAttribPointer(indexNormal, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(indexNormal);
+
 	glEnable(GL_DEPTH_TEST);
 
 	const auto locTrans = glGetUniformLocation(shaderProgram, "transformation");
 	const auto locProj = glGetUniformLocation(shaderProgram, "projection");
+
+	const auto locLightPos = glGetUniformLocation(shaderProgram, "lightPos");
+	const auto locLightEmission = glGetUniformLocation(shaderProgram, "lightEmission");
+
 	while(!glfwWindowShouldClose(window))
 	{
 		processInput(window);
+
+		//light1.position.x = cos(glfwGetTime()) * 100;
+		//light1.position.z = sin(glfwGetTime()) * 100;
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -136,6 +145,9 @@ int main()
 		glUniform1i(glGetUniformLocation(shaderProgram, "tex2"), 1);
 		glUniform1i(glGetUniformLocation(shaderProgram, "tex3"), 2);
 
+		glUniform3f(locLightPos, light1.position.x, light1.position.y, light1.position.z);
+		glUniform3f(locLightEmission, light1.emission.x, light1.emission.y, light1.emission.z);
+
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, garfieldTex1.get_texture());
 
@@ -145,6 +157,7 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, garfieldTex3.get_texture());
 
+		
 
 		//Projection Transformation
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
