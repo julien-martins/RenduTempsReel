@@ -6,7 +6,9 @@ in vec3 outPositionWorld;
 
 out vec4 color;
 
-uniform sampler2D texDiffuse;
+uniform sampler2D tex1;
+uniform sampler2D tex2;
+uniform sampler2D tex3;
 
 uniform vec3 lightPos;
 uniform vec3 lightEmission;
@@ -19,5 +21,7 @@ void main(){
     // final_color => Le / d2 * N . u1 * Albedo
     vec3 final_color = (lightEmission / dist2) * max(dot(norm, dir), 0);
 
-    color = texture(texDiffuse, UV) * vec4(final_color, 1.0f);
+    color = mix(texture(tex2, UV), texture(tex1, UV), 0.5) * vec4(final_color, 1.0f);
+    //color = vec4(dir, 1.0f);
+    //color = vec4((lightEmission / dist2), 1.0f);
 }
