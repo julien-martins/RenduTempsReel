@@ -5,6 +5,15 @@ model::model()
 	
 }
 
+model::~model()
+{
+	for (const auto& vbo : vbo_)
+	{
+		glDeleteBuffers(1, &vbo);
+	}
+}
+
+
 void model::load_obj(const char* file_name)
 {
 	std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
@@ -169,4 +178,47 @@ std::vector < std::vector < glm::vec3 >> model::return_vertices()
 	}
 
 	return result;
+}
+
+void model::add_texture(const std::string path)
+{
+	textures_.push_back(std::make_unique<Texture>(path));
+}
+
+void model::setup()
+{
+	vbo_ = std::vector<GLuint>(meshes_.size());
+
+	for(int i = 0; i < meshes_.size(); ++i)
+	{
+		// Create the vbo
+		glGenBuffers(1, &vbo_[i]);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_[i]);
+		glBufferData(GL_ARRAY_BUFFER, meshes_[i].vertices.size() * sizeof(vertex), &meshes_[i].vertices[0], GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+}
+
+void model::draw()
+{
+	for (int i = 0; i < meshes_.size(); ++i)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_[i]);
+
+		textures_[i]->bind();
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
+		glEnableVertexAttribArray(0);
+
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, uv));
+		glEnableVertexAttribArray(1);
+
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, normal));
+		glEnableVertexAttribArray(2);
+
+		glDrawArrays(GL_TRIANGLES, 0, meshes_[i].vertices.size());
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
 }

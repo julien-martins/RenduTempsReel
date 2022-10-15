@@ -54,25 +54,9 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glViewport(0, 0, 800, 600);
 	
-	//Generate VBO
-	unsigned int VBO;
-	glGenBuffers(1, &VBO);
-
-	unsigned int VBO_head;
-	glGenBuffers(1, &VBO_head);
-
-	unsigned int VBO_eye;
-	glGenBuffers(1, &VBO_eye);
-
 	//Generate VAO
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
-
-	unsigned int VAO_head;
-	glGenVertexArrays(1, &VAO_head);
-
-	unsigned int VAO_eye;
-	glGenVertexArrays(1, &VAO_eye);
 
 	//Compile Vertex Shader
 	const auto vertexShader = MakeShader(GL_VERTEX_SHADER, "resources/shaders/shader.vert");
@@ -84,68 +68,18 @@ int main()
 	glDeleteShader(fragmentShader);
 
 	Light light1 = { glm::vec3(10, 4, 10), glm::vec3(10000, 10000, 10000) };
-
-	//Load Garfield Texture
-	Texture garfieldTex1("resources/textures/tex1.png");
-	Texture garfieldTex2("resources/textures/tex2.png");
-	Texture garfieldTex3("resources/textures/tex3.png");
 	
 	model garfield_obj;
 	garfield_obj.load_obj("resources/models/garfield.obj");
+
 	
-	const auto garfield_obj_vertices = garfield_obj.return_vertices();
-	
-	const auto index = glGetAttribLocation(shaderProgram, "position");
-	const auto indexUV = glGetAttribLocation(shaderProgram, "vertexUV");
-	const auto indexNormal = glGetAttribLocation(shaderProgram, "normal");
-	
-	//Copy all vertices in the VAO
-	//CORPS
+	garfield_obj.add_texture("resources/textures/tex3.png");
+	garfield_obj.add_texture("resources/textures/tex1.png");
+	garfield_obj.add_texture("resources/textures/tex2.png");
+
 	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, garfield_obj.meshes_[0].vertices.size() * sizeof(vertex), &garfield_obj.meshes_[0].vertices[0], GL_STATIC_DRAW);
-
-	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
-	glEnableVertexAttribArray(index);
-
-	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, uv));
-	glEnableVertexAttribArray(indexUV);
-
-	glVertexAttribPointer(indexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, normal));
-	glEnableVertexAttribArray(indexNormal);
-
-	//HEAD
-	glBindVertexArray(VAO_head);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_head);
-	glBufferData(GL_ARRAY_BUFFER, garfield_obj.meshes_[1].vertices.size() * sizeof(vertex), &garfield_obj.meshes_[1].vertices[0], GL_STATIC_DRAW);
-
-	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
-	glEnableVertexAttribArray(index);
-
-	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, uv));
-	glEnableVertexAttribArray(indexUV);
-
-	glVertexAttribPointer(indexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, normal));
-	glEnableVertexAttribArray(indexNormal);
-
-	//EYE
-	glBindVertexArray(VAO_eye);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_eye);
-	glBufferData(GL_ARRAY_BUFFER, garfield_obj.meshes_[2].vertices.size() * sizeof(vertex), &garfield_obj.meshes_[2].vertices[0], GL_STATIC_DRAW);
-
-	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
-	glEnableVertexAttribArray(index);
-
-	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, uv));
-	glEnableVertexAttribArray(indexUV);
-
-	glVertexAttribPointer(indexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, normal));
-	glEnableVertexAttribArray(indexNormal);
+	garfield_obj.setup();
 	
-
 	glEnable(GL_DEPTH_TEST);
 
 	const auto locTrans = glGetUniformLocation(shaderProgram, "transformation");
@@ -180,38 +114,16 @@ int main()
 		glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
 
 		glUseProgram(shaderProgram);
+		glActiveTexture(GL_TEXTURE0);
 
-		//CORPS
 		glBindVertexArray(VAO);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, garfieldTex3.get_texture());
+		garfield_obj.draw();
 		
-		glDrawArrays(GL_TRIANGLES, 0, garfield_obj.meshes_[0].vertices.size());
-
-		//HEAD
-
-		glBindVertexArray(VAO_head);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, garfieldTex1.get_texture());
-		
-		glDrawArrays(GL_TRIANGLES, 0, garfield_obj.meshes_[1].vertices.size());
-
-		//EYE
-		glBindVertexArray(VAO_eye);
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, garfieldTex2.get_texture());
-
-		glDrawArrays(GL_TRIANGLES, 0, garfield_obj.meshes_[2].vertices.size());
-
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
 	glDeleteProgram(shaderProgram);
 
 	glfwTerminate();

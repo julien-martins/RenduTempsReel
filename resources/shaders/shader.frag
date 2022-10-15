@@ -20,4 +20,5 @@ void main(){
     vec3 final_color = (lightEmission / dist2) * max(dot(norm, dir), 0);
 
     color = texture(texDiffuse, UV) * vec4(final_color, 1.0f);
+    //color = vec4(outNormal, 1.0f);
 }

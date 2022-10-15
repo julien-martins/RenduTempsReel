@@ -10,6 +10,12 @@ class Texture
 		Texture(const std::string& file_name);
 		~Texture();
 
+		Texture& operator=(const Texture& other)
+		{
+			texture_ = other.texture_;
+			return *this;
+		}
+
 		void bind() const;
 
 		GLuint get_texture() const { return texture_; };
