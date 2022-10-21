@@ -21,4 +21,5 @@ void main(){
 
     color = texture(texDiffuse, UV) * vec4(final_color, 1.0f);
     //color = vec4(outNormal, 1.0f);
+    //color = vec4(1.0, 0.0, 0.0, 1.0);
 }

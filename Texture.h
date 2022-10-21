@@ -8,6 +8,7 @@ class Texture
 
 	public:
 		Texture(const std::string& file_name);
+		Texture(int width, int height);
 		~Texture();
 
 		Texture& operator=(const Texture& other)

@@ -2,7 +2,7 @@
 
 model::model()
 {
-	
+	modelMat = glm::mat4(1.0f);
 }
 
 model::~model()
@@ -185,6 +185,10 @@ void model::add_texture(const std::string path)
 	textures_.push_back(std::make_unique<Texture>(path));
 }
 
+void model::add_texture(Texture& texture) {
+	textures_.push_back(std::make_unique<Texture>(texture));
+}
+
 void model::setup()
 {
 	vbo_ = std::vector<GLuint>(meshes_.size());
@@ -207,7 +211,14 @@ void model::draw()
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, vbo_[i]);
 
-		textures_[i]->bind();
+		
+		if(textures_.size() == 1)
+			textures_[0]->bind();
+		else {
+
+			textures_[i]->bind();
+		}
+		
 
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
 		glEnableVertexAttribArray(0);
@@ -221,4 +232,19 @@ void model::draw()
 		glDrawArrays(GL_TRIANGLES, 0, meshes_[i].vertices.size());
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
+}
+
+void model::reset() {
+	modelMat = glm::mat4(1.0f);
+}
+
+void model::translate(float x, float y, float z) {
+	modelMat = glm::translate(modelMat, glm::vec3(x, y, z));
+}
+
+void model::scale(float x, float y, float z) {
+	modelMat = glm::scale(modelMat, glm::vec3(x, y, z));
+}
+void model::rotate(float angle, float x, float y, float z) {
+	modelMat = glm::rotate(modelMat, angle, glm::vec3(x, y, z));
 }

@@ -54,11 +54,36 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glViewport(0, 0, 800, 600);
 	
-	//Generate VAO
-	unsigned int VAO;
-	glGenVertexArrays(1, &VAO);
+	float quadVertices[] = {
+		// positions   // texCoords
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
 
-	//Compile Vertex Shader
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f
+	};
+
+	unsigned int screen_VAO;
+	glGenVertexArrays(1, &screen_VAO);
+
+	unsigned int screen_VBO;
+	glGenBuffers(1, &screen_VBO);
+
+	glBindVertexArray(screen_VAO);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, screen_VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	//MODEL SHADER
+	
 	const auto vertexShader = MakeShader(GL_VERTEX_SHADER, "resources/shaders/shader.vert");
 	const auto fragmentShader = MakeShader(GL_FRAGMENT_SHADER, "resources/shaders/shader.frag");
 
@@ -66,9 +91,22 @@ int main()
 
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
+	
+
+	//SCREEN SHADER
+	const auto screen_vertexShader = MakeShader(GL_VERTEX_SHADER, "resources/shaders/screen.vert");
+	const auto screen_fragmentShader = MakeShader(GL_FRAGMENT_SHADER, "resources/shaders/screen.frag");
+
+	const auto screenShaderProgram = AttachAndLink({ screen_vertexShader, screen_fragmentShader });
+
+	glDeleteShader(screen_vertexShader); 
+	glDeleteShader(screen_fragmentShader);
 
 	Light light1 = { glm::vec3(10, 4, 10), glm::vec3(10000, 10000, 10000) };
 	
+	
+	Texture texText("resources/textures/tex3.png");
+
 	model garfield_obj;
 	garfield_obj.load_obj("resources/models/garfield.obj");
 
@@ -76,25 +114,65 @@ int main()
 	garfield_obj.add_texture("resources/textures/tex3.png");
 	garfield_obj.add_texture("resources/textures/tex1.png");
 	garfield_obj.add_texture("resources/textures/tex2.png");
+	
 
+	model cube;
+	cube.load_obj("resources/models/cube.obj");
+	cube.add_texture("resources/textures/tex3.png");
+
+	unsigned int VAO;
+	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 	garfield_obj.setup();
-	
-	glEnable(GL_DEPTH_TEST);
+	cube.setup();
 
+	
 	const auto locTrans = glGetUniformLocation(shaderProgram, "transformation");
 	const auto locProj = glGetUniformLocation(shaderProgram, "projection");
 
 	const auto locLightPos = glGetUniformLocation(shaderProgram, "lightPos");
 	const auto locLightEmission = glGetUniformLocation(shaderProgram, "lightEmission");
-
 	
+	//Configuration of framebuffer
+
+	unsigned int fbo;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	unsigned int fbo_texture;
+	glGenTextures(1, &fbo_texture);
+	glBindTexture(GL_TEXTURE_2D, fbo_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
+	
+	//unsigned int rbo;
+	//glGenRenderbuffers(1, &rbo);
+
+	//glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600);
+	//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "FBO : COMPLETED" << std::endl;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	while(!glfwWindowShouldClose(window))
 	{
 		processInput(window);
 
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		//first pass
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glClearColor(0.2f, 0.7f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
 
 		glUniform1i(glGetUniformLocation(shaderProgram, "texDiffuse"), 0);
 
@@ -103,14 +181,16 @@ int main()
 
 		//Projection Transformation
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+		 
+		cube.reset();
+		cube.translate(0, 0, -450);
 
-		//model Transformation
-		glm::mat4 transMat = glm::mat4(1.0f);
-		transMat = glm::translate(transMat, glm::vec3(0, -50, -150));
-		transMat = glm::scale(transMat, glm::vec3(0.5, 0.5, 0.5));
-		transMat = glm::rotate(transMat, (float)(glfwGetTime()), glm::vec3(0.0, 1.0, 0.0));
+		garfield_obj.reset();
+		garfield_obj.translate(0, -50, -150);
+		garfield_obj.scale(0.5, 0.5, 0.5);
+		garfield_obj.rotate((float)(glfwGetTime()), 0.0, 1.0, 0.0);
 
-		glUniformMatrix4fv(locTrans, 1, GL_FALSE, glm::value_ptr(transMat));
+		glUniformMatrix4fv(locTrans, 1, GL_FALSE, glm::value_ptr(garfield_obj.modelMat));
 		glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
 
 		glUseProgram(shaderProgram);
@@ -118,13 +198,34 @@ int main()
 
 		glBindVertexArray(VAO);
 		garfield_obj.draw();
+		//cube.draw();
+		glUseProgram(0);
+		glBindVertexArray(0);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable (GL_DEPTH_TEST);
 		
+		//Draw framebuffer on quad
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glUseProgram(screenShaderProgram);
+
+		glBindVertexArray(screen_VAO);
+
+		//glBindTexture(GL_TEXTURE_2D, texText.get_texture());
+		glBindTexture(GL_TEXTURE_2D, fbo_texture);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		
+		glBindVertexArray(0);
+		glUseProgram(0);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteProgram(shaderProgram);
+	//glDeleteVertexArrays(1, &VAO);
+	//glDeleteProgram(shaderProgram);
 
 	glfwTerminate();
 	return 0;

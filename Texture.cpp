@@ -25,6 +25,17 @@ Texture::Texture(const std::string& file_name)
 	stbi_image_free(data);
 }
 
+Texture::Texture(int width, int height) {
+	glGenTextures(1, &texture_);
+	glBindTexture(GL_TEXTURE_2D, texture_);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+}
+
 Texture::~Texture()
 {
 	glDeleteTextures(1, &texture_);
